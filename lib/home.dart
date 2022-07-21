@@ -10,21 +10,29 @@ class Conversor extends StatefulWidget {
 }
 
 class _ConversorState extends State<Conversor> {
-  double? dolar;
-  double? euro;
-  double? dolarV;
-  double? euroV;
+  double? coin1;
+  double? coin2;
+  double? coinV1;
+  double? coinV2;
 
-  final realC =
-      MoneyMaskedTextController(decimalSeparator: '.', thousandSeparator: ',');
-  final dolarC =
-      MoneyMaskedTextController(decimalSeparator: '.', thousandSeparator: ',');
-  final euroC =
+  final realC = MoneyMaskedTextController(
+      initialValue: 0.00, decimalSeparator: '.', thousandSeparator: ',');
+  final coin1C = MoneyMaskedTextController(
+      initialValue: 0.00, decimalSeparator: '.', thousandSeparator: ',');
+  final coin2C =
       MoneyMaskedTextController(decimalSeparator: '.', thousandSeparator: ',');
 
   // final realC = TextEditingController();
   // final dolarC = TextEditingController();
   // final euroC = TextEditingController();
+
+  String moeda = 'USD';
+  String moeda2 = 'EUR';
+
+  List<String> moedas = [
+    'USD',
+    'EUR',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -41,59 +49,63 @@ class _ConversorState extends State<Conversor> {
 
   conversor() {
     return FutureBuilder<Map>(
-        future: getData(),
-        builder: (BuildContext context, snapshot) {
-          switch (snapshot.connectionState) {
-            case ConnectionState.none:
-            case ConnectionState.waiting:
+      future: getData(),
+      builder: (BuildContext context, snapshot) {
+        switch (snapshot.connectionState) {
+          case ConnectionState.none:
+          case ConnectionState.waiting:
+            return const Center(
+              child: Text(
+                "carregando dados",
+                style: TextStyle(color: Colors.amber, fontSize: 25),
+                textAlign: TextAlign.center,
+              ),
+            );
+          default:
+            if (snapshot.hasError) {
               return const Center(
                 child: Text(
-                  "carregando dados",
+                  "erro ao carregar dados",
                   style: TextStyle(color: Colors.amber, fontSize: 25),
                   textAlign: TextAlign.center,
                 ),
               );
-            default:
-              if (snapshot.hasError) {
-                return const Center(
-                  child: Text(
-                    "erro ao carregar dados",
-                    style: TextStyle(color: Colors.amber, fontSize: 25),
-                    textAlign: TextAlign.center,
-                  ),
-                );
-              } else {
-                dolar = snapshot.data?["results"]["currencies"]["USD"]["buy"];
-                euro = snapshot.data?["results"]["currencies"]["EUR"]["buy"];
-                dolarV =
-                    snapshot.data?["results"]["currencies"]["USD"]["variation"];
-                euroV =
-                    snapshot.data?["results"]["currencies"]["EUR"]["variation"];
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Icon(Icons.monetization_on,
-                          size: 150, color: Colors.amber),
-                      buidTextField(
-                        "Reais",
-                        "R\$ ",
-                        realC,
-                        realChanged,
-                      ),
-                      const Divider(),
-                      buidTextField("Dolar", "U\$ ", dolarC, dolarChanged,
-                          variation: dolarV),
-                      const Divider(),
-                      buidTextField("Euro", "€ ", euroC, euroChanged,
-                          variation: euroV)
-                    ],
-                  ),
-                );
-              }
-          }
-        });
+            } else {
+              coin2 = snapshot.data!["results"]["currencies"][moeda2]["buy"];
+              coinV2 =
+                  snapshot.data!["results"]["currencies"][moeda2]["variation"];
+
+              coin1 = snapshot.data!["results"]["currencies"][moeda]["buy"];
+              coinV1 =
+                  snapshot.data!["results"]["currencies"][moeda]["variation"];
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Icon(Icons.monetization_on,
+                        size: 150, color: Colors.amber),
+                    const Divider(),
+                    buidTextField(
+                      "BRL",
+                      "R\$ ",
+                      realC,
+                      realChanged2,
+                    ),
+                    const Divider(),
+                    buidTextField(moeda, "\$ ", coin1C, realChanged,
+                        variation: coinV1),
+                    const Divider(),
+                    buidTextField2(moeda2, "\$ ", coin2C, realChanged1,
+                        variation: coinV2),
+                  ],
+                ),
+              );
+            }
+        }
+      },
+    );
   }
 
   Widget buidTextField(String label, String prefix, MoneyMaskedTextController C,
@@ -105,48 +117,169 @@ class _ConversorState extends State<Conversor> {
       onChanged: F,
       controller: C,
       decoration: InputDecoration(
-          suffixIcon: variation == null
-              ? null
-              : variation == 0
-                  ? const Icon(
-                      Icons.minimize,
-                      color: Colors.grey,
-                    )
-                  : variation.toString().contains("-")
-                      ? const Icon(
-                          Icons.arrow_downward,
-                          color: Colors.red,
-                          size: 20,
-                        )
-                      : const Icon(
-                          Icons.arrow_upward,
-                          color: Colors.green,
-                          size: 20,
+        prefixIcon: label != 'BRL'
+            ? Padding(
+                padding: const EdgeInsets.only(left: 8, top: 8, bottom: 8),
+                child: DropdownButton<String>(
+                  dropdownColor: Colors.black,
+                  hint: Icon(Icons.search_rounded),
+                  isDense: true,
+                  value: moeda,
+                  items: moedas
+                      .map(
+                        (teste) => DropdownMenuItem(
+                          child: Text(
+                            teste,
+                            style: TextStyle(color: Colors.amber),
+                          ),
+                          value: teste,
                         ),
-          suffix: variation != null
-              ? Text(
-                  variation.toString(),
-                  style: const TextStyle(color: Colors.amber, fontSize: 15),
+                      )
+                      .toList(),
+                  onChanged: (String? value) {
+                    setState(() {
+                      moeda = value!;
+                      realChanged2(realC.text);
+                    });
+                  },
+                  icon:
+                      Icon(Icons.arrow_drop_down_rounded, color: Colors.amber),
+                ),
+              )
+            : TextButton(
+                onPressed: null,
+                child: Text(
+                  prefix,
+                  style: TextStyle(color: Colors.amber, fontSize: 18),
+                )),
+        suffixIcon: variation == null
+            ? null
+            : variation == 0
+                ? const Icon(
+                    Icons.minimize,
+                    color: Colors.grey,
+                  )
+                : variation.toString().contains("-")
+                    ? const Icon(
+                        Icons.arrow_downward,
+                        color: Colors.red,
+                        size: 20,
+                      )
+                    : const Icon(
+                        Icons.arrow_upward,
+                        color: Colors.green,
+                        size: 20,
+                      ),
+        suffix: variation != null
+            ? Text(
+                variation.toString(),
+                style: const TextStyle(color: Colors.amber, fontSize: 15),
+              )
+            : const Text(""),
+        enabledBorder: const OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.amber)),
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.amber),
+        border: const OutlineInputBorder(),
+        prefixStyle: const TextStyle(color: Colors.amber, fontSize: 25),
+        // prefixText: prefix
+      ),
+      style: const TextStyle(color: Colors.amber, fontSize: 25),
+    );
+  }
+
+  Widget buidTextField2(String label, String prefix,
+      MoneyMaskedTextController C, Function(String) F,
+      {double? variation}) {
+    return TextField(
+      enableInteractiveSelection: false,
+      keyboardType: TextInputType.number,
+      onChanged: F,
+      controller: C,
+      decoration: InputDecoration(
+        prefixIcon: Padding(
+          padding: const EdgeInsets.only(left: 8, top: 8, bottom: 8),
+          child: DropdownButton<String>(
+            underline: Container(height: 0),
+            hint: Icon(Icons.search_rounded),
+            isDense: true,
+            value: moeda2,
+            items: moedas
+                .map(
+                  (teste) => DropdownMenuItem(
+                    child: Text(
+                      teste,
+                      style: TextStyle(color: Colors.amber),
+                    ),
+                    value: teste,
+                  ),
                 )
-              : const Text(""),
-          enabledBorder: const OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.amber)),
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.amber),
-          border: const OutlineInputBorder(),
-          prefixStyle: const TextStyle(color: Colors.amber, fontSize: 25),
-          prefixText: prefix),
+                .toList(),
+            onChanged: (String? value) {
+              setState(() {
+                moeda2 = value!;
+                realChanged2(realC.text);
+              });          
+            },
+            icon: Icon(Icons.arrow_drop_down_rounded, color: Colors.amber),
+          ),
+        ),
+        suffixIcon: variation == null
+            ? null
+            : variation == 0
+                ? const Icon(
+                    Icons.minimize,
+                    color: Colors.grey,
+                  )
+                : variation.toString().contains("-")
+                    ? const Icon(
+                        Icons.arrow_downward,
+                        color: Colors.red,
+                        size: 20,
+                      )
+                    : const Icon(
+                        Icons.arrow_upward,
+                        color: Colors.green,
+                        size: 20,
+                      ),
+        suffix: variation != null
+            ? Text(
+                variation.toString(),
+                style: const TextStyle(color: Colors.amber, fontSize: 15),
+              )
+            : const Text(""),
+        enabledBorder: const OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.amber)),
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.amber),
+        border: const OutlineInputBorder(),
+        prefixStyle: const TextStyle(color: Colors.amber, fontSize: 25),
+        // prefixText: prefix
+      ),
       style: const TextStyle(color: Colors.amber, fontSize: 25),
     );
   }
 
   void clearAll() {
-    dolarC.clear();
+    coin1C.clear();
     realC.clear();
-    euroC.clear();
+    coin2C.clear();
   }
 
-  realChanged(String valorReal) {
+  realChanged(String? valorReal) {
+    if (valorReal!.isEmpty) {
+      clearAll();
+      return;
+    }
+
+    valorReal = valorReal.replaceAll(",", "");
+
+    double realAtual = double.parse(valorReal);
+    coin2C.text = (realAtual * coin1! / coin2!).toStringAsFixed(2);
+    realC.text = (realAtual * coin1!).toStringAsFixed(2);
+  }
+
+  realChanged1(String valorReal) {
     if (valorReal.isEmpty) {
       clearAll();
       return;
@@ -155,33 +288,20 @@ class _ConversorState extends State<Conversor> {
     valorReal = valorReal.replaceAll(",", "");
 
     double realAtual = double.parse(valorReal);
-    dolarC.text = (realAtual / dolar!).toStringAsFixed(2);
-    euroC.text = (realAtual / euro!).toStringAsFixed(2);
+    coin1C.text = (realAtual * coin2! / coin1!).toStringAsFixed(2);
+    realC.text = (realAtual * coin2!).toStringAsFixed(2);
   }
 
-  dolarChanged(String valorDolar) {
+  realChanged2(String valorDolar) {
     if (valorDolar.isEmpty) {
       clearAll();
       return;
     }
-
     valorDolar = valorDolar.replaceAll(",", "");
 
     double dolarAtual = double.parse(valorDolar);
-    realC.text = (dolarAtual * dolar!).toStringAsFixed(2);
-    euroC.text = (dolarAtual * dolar! / euro!).toStringAsFixed(2);
-  }
-
-  euroChanged(String valorEuro) {
-    if (valorEuro.isEmpty) {
-      clearAll();
-      return;
-    }
-
-    valorEuro = valorEuro.replaceAll(",", "");
-
-    double euroAtual = double.parse(valorEuro);
-    realC.text = (euroAtual * euro!).toStringAsFixed(2);
-    dolarC.text = (euroAtual * euro! / dolar!).toStringAsFixed(2);
+  coin1C.text = (dolarAtual * coin1!).toStringAsFixed(2);
+    coin2C.text = (dolarAtual * coin2!).toStringAsFixed(2);
+    
   }
 }
