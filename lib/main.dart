@@ -25,5 +25,6 @@ class MyApp extends StatelessWidget {
 
 Future<Map> getData() async {
   var response = await http.get(request);
+  print(response.body);
   return json.decode(response.body);
 }

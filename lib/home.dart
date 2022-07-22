@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:convmoedas/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_masked_text2/flutter_masked_text2.dart';
@@ -10,6 +12,20 @@ class Conversor extends StatefulWidget {
 }
 
 class _ConversorState extends State<Conversor> {
+  final streamController = StreamController<Map>();
+
+  @override
+  void initState() {
+    super.initState();
+    taxas();
+  }
+
+  taxas() async {
+    Map future = await getData();
+
+    streamController.add(future);
+  }
+
   double? coin1;
   double? coin2;
   double? coinV1;
@@ -48,8 +64,8 @@ class _ConversorState extends State<Conversor> {
   }
 
   conversor() {
-    return FutureBuilder<Map>(
-      future: getData(),
+    return StreamBuilder<Map>(
+      stream: streamController.stream,
       builder: (BuildContext context, snapshot) {
         switch (snapshot.connectionState) {
           case ConnectionState.none:
@@ -88,16 +104,18 @@ class _ConversorState extends State<Conversor> {
                         size: 150, color: Colors.amber),
                     const Divider(),
                     buidTextField(
+                      1,
                       "BRL",
                       "R\$ ",
                       realC,
-                      realChanged2,
+                      realChanged,
+                      
                     ),
                     const Divider(),
-                    buidTextField(moeda, "\$ ", coin1C, realChanged,
+                    buidTextField(1,moeda, "\$ ", coin1C, realChanged1,
                         variation: coinV1),
                     const Divider(),
-                    buidTextField2(moeda2, "\$ ", coin2C, realChanged1,
+                    buidTextField(2,moeda2, "\$ ", coin2C, realChanged2,
                         variation: coinV2),
                   ],
                 ),
@@ -108,7 +126,7 @@ class _ConversorState extends State<Conversor> {
     );
   }
 
-  Widget buidTextField(String label, String prefix, MoneyMaskedTextController C,
+  Widget buidTextField(int dropvalue ,String label, String prefix, MoneyMaskedTextController C,
       Function(String) F,
       {double? variation}) {
     return TextField(
@@ -124,7 +142,7 @@ class _ConversorState extends State<Conversor> {
                   dropdownColor: Colors.black,
                   hint: Icon(Icons.search_rounded),
                   isDense: true,
-                  value: moeda,
+                  value: dropvalue == 1 ? moeda : moeda2,
                   items: moedas
                       .map(
                         (teste) => DropdownMenuItem(
@@ -138,9 +156,11 @@ class _ConversorState extends State<Conversor> {
                       .toList(),
                   onChanged: (String? value) {
                     setState(() {
-                      moeda = value!;
-                      realChanged2(realC.text);
+                   dropvalue == 1 ? moeda = value! : moeda2 = value!;
                     });
+                    taxas().then(
+                      (_) => realChanged(realC.text),
+                    );
                   },
                   icon:
                       Icon(Icons.arrow_drop_down_rounded, color: Colors.amber),
@@ -188,85 +208,13 @@ class _ConversorState extends State<Conversor> {
     );
   }
 
-  Widget buidTextField2(String label, String prefix,
-      MoneyMaskedTextController C, Function(String) F,
-      {double? variation}) {
-    return TextField(
-      enableInteractiveSelection: false,
-      keyboardType: TextInputType.number,
-      onChanged: F,
-      controller: C,
-      decoration: InputDecoration(
-        prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 8, top: 8, bottom: 8),
-          child: DropdownButton<String>(
-            underline: Container(height: 0),
-            hint: Icon(Icons.search_rounded),
-            isDense: true,
-            value: moeda2,
-            items: moedas
-                .map(
-                  (teste) => DropdownMenuItem(
-                    child: Text(
-                      teste,
-                      style: TextStyle(color: Colors.amber),
-                    ),
-                    value: teste,
-                  ),
-                )
-                .toList(),
-            onChanged: (String? value) {
-              setState(() {
-                moeda2 = value!;
-                realChanged2(realC.text);
-              });          
-            },
-            icon: Icon(Icons.arrow_drop_down_rounded, color: Colors.amber),
-          ),
-        ),
-        suffixIcon: variation == null
-            ? null
-            : variation == 0
-                ? const Icon(
-                    Icons.minimize,
-                    color: Colors.grey,
-                  )
-                : variation.toString().contains("-")
-                    ? const Icon(
-                        Icons.arrow_downward,
-                        color: Colors.red,
-                        size: 20,
-                      )
-                    : const Icon(
-                        Icons.arrow_upward,
-                        color: Colors.green,
-                        size: 20,
-                      ),
-        suffix: variation != null
-            ? Text(
-                variation.toString(),
-                style: const TextStyle(color: Colors.amber, fontSize: 15),
-              )
-            : const Text(""),
-        enabledBorder: const OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.amber)),
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.amber),
-        border: const OutlineInputBorder(),
-        prefixStyle: const TextStyle(color: Colors.amber, fontSize: 25),
-        // prefixText: prefix
-      ),
-      style: const TextStyle(color: Colors.amber, fontSize: 25),
-    );
-  }
-
   void clearAll() {
     coin1C.clear();
     realC.clear();
     coin2C.clear();
   }
 
-  realChanged(String? valorReal) {
+  realChanged1(String? valorReal) {
     if (valorReal!.isEmpty) {
       clearAll();
       return;
@@ -279,7 +227,7 @@ class _ConversorState extends State<Conversor> {
     realC.text = (realAtual * coin1!).toStringAsFixed(2);
   }
 
-  realChanged1(String valorReal) {
+  realChanged2(String valorReal) {
     if (valorReal.isEmpty) {
       clearAll();
       return;
@@ -292,7 +240,7 @@ class _ConversorState extends State<Conversor> {
     realC.text = (realAtual * coin2!).toStringAsFixed(2);
   }
 
-  realChanged2(String valorDolar) {
+  realChanged(String valorDolar) {
     if (valorDolar.isEmpty) {
       clearAll();
       return;
@@ -300,8 +248,7 @@ class _ConversorState extends State<Conversor> {
     valorDolar = valorDolar.replaceAll(",", "");
 
     double dolarAtual = double.parse(valorDolar);
-  coin1C.text = (dolarAtual * coin1!).toStringAsFixed(2);
+    coin1C.text = (dolarAtual * coin1!).toStringAsFixed(2);
     coin2C.text = (dolarAtual * coin2!).toStringAsFixed(2);
-    
   }
 }
